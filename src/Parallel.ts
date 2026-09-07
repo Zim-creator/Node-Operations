@@ -27,7 +27,7 @@ type GetIO<TFuncs, TInput extends boolean> = TFuncs extends readonly [
 	? First extends PossibleCallback<infer In, infer Out>
 		? (TInput extends true ? In : Out) extends infer IO
 			? IO extends BaseIO
-				? IO extends undefined | void | null
+				? IO extends undefined | undefined | null
 					? GetIO<Rest, TInput>
 					: IO & GetIO<Rest, TInput>
 				: 4
@@ -36,8 +36,8 @@ type GetIO<TFuncs, TInput extends boolean> = TFuncs extends readonly [
 	: never;
 
 export async function Parallel<const TSteps, TInput = GetIO<TSteps, true>>(
-	steps: TSteps & ValidateFunctions<TSteps>,
-	config?: OperationConfig<TInput>,
+	_steps: TSteps & ValidateFunctions<TSteps>,
+	_config?: OperationConfig<TInput>,
 ) {
-	return Operation((input) => {});
+	return Operation((_input) => {});
 }
