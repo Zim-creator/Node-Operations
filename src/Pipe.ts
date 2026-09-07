@@ -1,10 +1,10 @@
-import { Operation, type OperationConfig } from "#src/Operation";
+import { Operation, type OperationConfig } from '#src/Operation';
 import {
 	type BaseIO,
 	type Fn,
 	type OperationFunction,
 	type OperationHandler,
-} from "#src/types";
+} from '#src/types';
 
 type FirstInput<T> = T extends readonly Fn[]
 	? T[0] extends Fn<infer Args, infer _Result>
@@ -39,10 +39,9 @@ type CompareFunc<
 			: First
 		: never;
 
-type PossibleCallback<
-	In extends BaseIO = BaseIO,
-	Out extends BaseIO = BaseIO,
-> = OperationHandler<In, Out> | OperationFunction<In, Out>;
+type PossibleCallback<In extends BaseIO = BaseIO, Out extends BaseIO = BaseIO> =
+	| OperationHandler<In, Out>
+	| OperationFunction<In, Out>;
 
 type ValidateFunctions<TFuncs> = TFuncs extends readonly [
 	infer First,
@@ -64,7 +63,7 @@ export function Pipe<
 	config?: OperationConfig<TInput>,
 ): OperationFunction<TInput, TResult> {
 	if (!steps.length) {
-		throw new Error("Error: empty array");
+		throw new Error('Error: empty array');
 	}
 
 	return Operation<TInput, TResult>(async (initialInput, initialCtx) => {

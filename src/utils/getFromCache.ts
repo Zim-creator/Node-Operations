@@ -1,4 +1,4 @@
-import { type OperationCacheMap } from "#src/store";
+import { type OperationCacheMap } from '#src/store';
 
 export function getFromCache<T>(
 	cache: OperationCacheMap,

@@ -1,19 +1,19 @@
-import { fileURLToPath, URL } from "node:url";
-import { defineConfig } from "vitest/config";
+import { fileURLToPath, URL } from 'node:url';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	resolve: {
 		alias: {
-			"#src": fileURLToPath(new URL("./src", import.meta.url)),
+			'#src': fileURLToPath(new URL('./src', import.meta.url)),
 		},
 	},
 	test: {
-		environment: "node",
+		environment: 'node',
 		coverage: {
-			provider: "v8",
-			reporter: ["text", "html", "lcov"],
-			include: ["src/**/*.ts"],
-			exclude: ["src/**/*.test.ts"],
+			provider: 'v8',
+			reporter: ['text', 'html', 'lcov'],
+			include: ['src/**/*.ts'],
+			exclude: ['src/**/*.test.ts'],
 		},
 	},
 });

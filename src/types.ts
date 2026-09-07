@@ -1,4 +1,4 @@
-import { type OperationCacheMap } from "#src/store";
+import { type OperationCacheMap } from '#src/store';
 
 // biome-ignore lint/suspicious/noExplicitAny: expected any
 export type Fn<TArgs extends any[] = any[], TResult = any> = (

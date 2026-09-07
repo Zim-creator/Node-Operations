@@ -1,13 +1,13 @@
-import { getReactCache } from "#src/store";
+import { getReactCache } from '#src/store';
 import {
 	type BaseIO,
 	type OperationContext,
 	type OperationFunction,
 	type OperationHandler,
 	type OperationMeta,
-} from "#src/types";
-import { getFromCache } from "#src/utils/getFromCache";
-import { isOperation } from "#src/utils/isOperation";
+} from '#src/types';
+import { getFromCache } from '#src/utils/getFromCache';
+import { isOperation } from '#src/utils/isOperation';
 
 type OperationConfigWithCache<TInput> = {
 	cache: true;
@@ -37,7 +37,7 @@ export function Operation<
 	}
 
 	const { cache: shouldCache, key } = config || {};
-	const getKey = typeof key === "function" ? key : () => key as string;
+	const getKey = typeof key === 'function' ? key : () => key as string;
 
 	const baseExecutable = async (
 		initialInput: TInput,
@@ -58,7 +58,7 @@ export function Operation<
 		const cachedResult = getFromCache<TResult>(ctx.cache, cacheKey);
 
 		if (cachedResult) {
-			console.log("CHACHED RESULT: ", ctx.cache.entries());
+			console.log('CHACHED RESULT: ', ctx.cache.entries());
 			return cachedResult;
 		}
 

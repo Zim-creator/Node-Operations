@@ -1,14 +1,13 @@
-import { Operation, type OperationConfig } from "#src/Operation";
+import { Operation, type OperationConfig } from '#src/Operation';
 import {
 	type BaseIO,
 	type OperationFunction,
 	type OperationHandler,
-} from "#src/types";
+} from '#src/types';
 
-type PossibleCallback<
-	In extends BaseIO = BaseIO,
-	Out extends BaseIO = BaseIO,
-> = OperationHandler<In, Out> | OperationFunction<In, Out>;
+type PossibleCallback<In extends BaseIO = BaseIO, Out extends BaseIO = BaseIO> =
+	| OperationHandler<In, Out>
+	| OperationFunction<In, Out>;
 
 type ValidateFunctions<TFuncs> = TFuncs extends readonly [
 	infer First,

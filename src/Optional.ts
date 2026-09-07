@@ -1,9 +1,9 @@
-import { Operation } from "#src/Operation";
+import { Operation } from '#src/Operation';
 import {
 	type BaseIO,
 	type OperationFunction,
 	type OperationHandler,
-} from "#src/types";
+} from '#src/types';
 
 type GeneratedResult<
 	TInput extends BaseIO,
