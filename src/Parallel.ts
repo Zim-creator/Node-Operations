@@ -3,7 +3,7 @@ import {
 	type BaseIO,
 	type OperationFunction,
 	type OperationHandler,
-} from "#src/types.d";
+} from "#src/types";
 
 type PossibleCallback<
 	In extends BaseIO = BaseIO,
@@ -42,6 +42,3 @@ export async function Parallel<const TSteps, TInput = GetIO<TSteps, true>>(
 ) {
 	return Operation((input) => {});
 }
-
-const test = Parallel([(i: { a: string }) => {}, () => {}]);
-const test2 = Parallel([]);

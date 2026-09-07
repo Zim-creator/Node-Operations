@@ -1,4 +1,4 @@
-import { type BaseIO, type OperationFunction } from "#src/types.d";
+import { type BaseIO, type OperationFunction } from "#src/types";
 
 export function isOperation<TInput extends BaseIO, TResult extends BaseIO>(
 	fn: unknown | OperationFunction<TInput, TResult>,

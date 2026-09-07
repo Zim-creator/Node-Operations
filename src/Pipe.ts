@@ -4,7 +4,7 @@ import {
 	type Fn,
 	type OperationFunction,
 	type OperationHandler,
-} from "#src/types.d";
+} from "#src/types";
 
 type FirstInput<T> = T extends readonly Fn[]
 	? T[0] extends Fn<infer Args, infer _Result>
@@ -77,5 +77,3 @@ export function Pipe<
 		return result as TResult;
 	}, config);
 }
-
-const test = Pipe([]);

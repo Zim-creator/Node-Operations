@@ -3,7 +3,7 @@ import {
 	type BaseIO,
 	type OperationFunction,
 	type OperationHandler,
-} from "#src/types.d";
+} from "#src/types";
 
 type GeneratedResult<
 	TInput extends BaseIO,

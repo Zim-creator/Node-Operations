@@ -5,7 +5,7 @@ import {
 	type OperationFunction,
 	type OperationHandler,
 	type OperationMeta,
-} from "#src/types.d";
+} from "#src/types";
 import { getFromCache } from "#src/utils/getFromCache";
 import { isOperation } from "#src/utils/isOperation";
 
