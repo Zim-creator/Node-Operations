@@ -19,6 +19,18 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
+		},
+		"./operation": {
+			"types": "./dist/Operation.d.ts",
+			"import": "./dist/Operation.js"
+		},
+		"./optional": {
+			"types": "./dist/Optional.d.ts",
+			"import": "./dist/Optional.js"
+		},
+		"./pipe": {
+			"types": "./dist/Pipe.d.ts",
+			"import": "./dist/Pipe.js"
 		}
 	},
 	"scripts": {
