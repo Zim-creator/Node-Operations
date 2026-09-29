@@ -1,4 +1,4 @@
-import { type OperationCacheMap } from '#src/store';
+import { type OperationCache } from '#src/store';
 
 // biome-ignore lint/suspicious/noExplicitAny: expected any
 export type Fn<TArgs extends any[] = any[], TResult = any> = (
@@ -21,7 +21,7 @@ export type BaseIO =
 	| null;
 
 export type OperationContext = {
-	cache: OperationCacheMap;
+	cache: OperationCache;
 };
 
 export type OperationHandler<

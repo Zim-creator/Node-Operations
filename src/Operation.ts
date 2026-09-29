@@ -1,4 +1,4 @@
-import { getReactCache } from '#src/store';
+import { getOperationCache } from '#src/store';
 import {
 	type BaseIO,
 	type OperationContext,
@@ -46,7 +46,7 @@ export function Operation<
 		const input = initialInput;
 
 		const ctx: OperationContext = {
-			cache: initialCtx?.cache ?? getReactCache(),
+			cache: initialCtx?.cache ?? getOperationCache(),
 		};
 
 		const cacheKey = shouldCache && key ? getKey(input) : undefined;
@@ -58,7 +58,7 @@ export function Operation<
 		const cachedResult = getFromCache<TResult>(ctx.cache, cacheKey);
 
 		if (cachedResult) {
-			console.log('CHACHED RESULT: ', ctx.cache.entries());
+			console.log('CHACHED RESULT: ', ctx.cache.entries?.());
 			return cachedResult;
 		}
 
