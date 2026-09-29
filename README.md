@@ -90,6 +90,50 @@ Cache entries store execution promises, allowing concurrent executions with the 
 
 An empty key disables caching.
 
+### Cache factory with React
+
+By default, each operation call without an explicit cache creates a new `Map`. Use `setOperationCacheFactory` to control how those calls obtain their cache.
+
+For React Server Components (including Next.js), configure the factory once at module scope in a shared server module, before calling operations:
+
+```ts
+import { cache } from 'react';
+import { Operation } from '@zim-creator/node-operations';
+import { setOperationCacheFactory } from '@zim-creator/node-operations/store';
+
+setOperationCacheFactory(
+	cache(() => new Map<string, Promise<unknown>>()),
+);
+
+export const getCachedUser = Operation(
+	async ({ id }: { id: string }) => ({ id, name: 'John' }),
+	{
+		cache: true,
+		key: ({ id }) => `user:${id}`,
+	},
+);
+```
+
+Import that operation into a Server Component:
+
+```tsx
+import { getCachedUser } from './operations';
+
+export default async function UserPage() {
+	const [user, sameUser] = await Promise.all([
+		getCachedUser({ id: '1' }),
+		getCachedUser({ id: '1' }),
+	]);
+
+	// Both calls share one handler execution and resolve to the same result.
+	return <p>{user.name}</p>;
+}
+```
+
+React's `cache` shares the map within a server request and invalidates it for each new request. This requires the React Server Component cache context; calls outside that context do not share the map through React. See the [React cache documentation](https://react.dev/reference/react/cache).
+
+Operations still need `cache: true` and a non-empty key. Keys share a namespace within the map, so include an operation prefix and all inputs that affect the result. An explicitly supplied `ctx.cache` takes precedence over the factory.
+
 ### Existing operations
 
 Calling `Operation` with an existing operation returns that operation unchanged.
@@ -229,6 +273,7 @@ import {
 	Operation,
 	Optional,
 	Pipe,
+	setOperationCacheFactory,
 } from '@zim-creator/node-operations';
 ```
 
@@ -251,6 +296,7 @@ Individual entry points are also available:
 import { Operation } from '@zim-creator/node-operations/operation';
 import { Optional } from '@zim-creator/node-operations/optional';
 import { Pipe } from '@zim-creator/node-operations/pipe';
+import { setOperationCacheFactory } from '@zim-creator/node-operations/store';
 ```
 
 ## Status

@@ -31,6 +31,10 @@
 		"./pipe": {
 			"types": "./dist/Pipe.d.ts",
 			"import": "./dist/Pipe.js"
+		},
+		"./store": {
+			"types": "./dist/store.d.ts",
+			"import": "./dist/store.js"
 		}
 	},
 	"scripts": {
