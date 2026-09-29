@@ -1,7 +1,7 @@
-import { type OperationCacheMap } from '#src/store';
+import { type OperationCache } from '#src/store';
 
 export function getFromCache<T>(
-	cache: OperationCacheMap,
+	cache: OperationCache,
 	key: string,
 ): Promise<T> | undefined {
 	return cache.get(key) as Promise<T> | undefined;
