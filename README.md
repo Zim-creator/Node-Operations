@@ -4,6 +4,8 @@ Reusable typed operations for Node.js and Next.js.
 
 `@zim-creator/node-operations` provides small composable primitives for building backend workflows with predictable input/output types, shared execution context, optional caching, and type-safe pipelines.
 
+install: yarn add github:Zim-creator/Node-Operations
+
 ## Core concepts
 
 An **Operation** is an async function with:
