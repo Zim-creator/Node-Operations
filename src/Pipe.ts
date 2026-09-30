@@ -47,32 +47,31 @@ type ValidateFunctions<TFuncs> = TFuncs extends readonly [
 	infer First,
 	...infer Rest,
 ]
-	? First extends PossibleCallback<infer In, infer Out>
-		? In & Out extends BaseIO
+	? First extends PossibleCallback<infer _In, infer _Out>
+		? Rest[0] extends PossibleCallback<infer _In, infer _Out>
 			? [CompareFunc<First, Rest[0]>, ...ValidateFunctions<Rest>]
-			: [PossibleCallback, ...ValidateFunctions<Rest>]
-		: [PossibleCallback, ...ValidateFunctions<Rest>]
-	: PossibleCallback[];
+			: [First]
+		: PossibleCallback[]
+	: [PossibleCallback, ...PossibleCallback[]];
 
-export function Pipe<
-	const TSteps extends PossibleCallback[],
-	TInput extends FirstInput<TSteps>,
-	TResult extends LastResult<TSteps>,
->(
+export function Pipe<const TSteps>(
 	steps: TSteps & ValidateFunctions<TSteps>,
-	config?: OperationConfig<TInput>,
-): OperationFunction<TInput, TResult> {
+	config?: OperationConfig<FirstInput<TSteps>>,
+): OperationFunction<FirstInput<TSteps>, LastResult<TSteps>> {
 	if (!steps.length) {
 		throw new Error('Error: empty array');
 	}
 
-	return Operation<TInput, TResult>(async (initialInput, initialCtx) => {
-		let result: BaseIO = initialInput;
+	return Operation<FirstInput<TSteps>, LastResult<TSteps>>(
+		async (initialInput, initialCtx) => {
+			let result: BaseIO = initialInput;
 
-		for (const step of steps) {
-			result = await step(result, initialCtx);
-		}
+			for (const step of steps) {
+				result = await step(result, initialCtx);
+			}
 
-		return result as TResult;
-	}, config);
+			return result as LastResult<TSteps>;
+		},
+		config,
+	);
 }

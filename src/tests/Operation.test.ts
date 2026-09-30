@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Operation } from '#src/Operation';
-import { type OperationCacheMap } from '#src/store';
+import { type OperationCache } from '#src/store';
 
 describe('Operation', () => {
 	it('executes handler with input', async () => {
@@ -31,7 +31,7 @@ describe('Operation', () => {
 	});
 
 	it('passes provided cache through context', async () => {
-		const cache: OperationCacheMap = new Map();
+		const cache: OperationCache = new Map();
 
 		const operation = Operation(async (input: { value: number }, ctx) => {
 			expect(ctx.cache).toBe(cache);
@@ -50,7 +50,7 @@ describe('Operation', () => {
 			key: 'test',
 		});
 
-		const cache: OperationCacheMap = new Map();
+		const cache: OperationCache = new Map();
 
 		const first = operation({ value: 1 }, { cache });
 		const second = operation({ value: 2 }, { cache });
@@ -69,7 +69,7 @@ describe('Operation', () => {
 			key: ({ id }) => id,
 		});
 
-		const cache: OperationCacheMap = new Map();
+		const cache: OperationCache = new Map();
 
 		await operation({ id: '1' }, { cache });
 		await operation({ id: '1' }, { cache });
@@ -83,7 +83,7 @@ describe('Operation', () => {
 
 		const operation = Operation(handler);
 
-		const cache: OperationCacheMap = new Map();
+		const cache: OperationCache = new Map();
 
 		await operation({ value: 1 }, { cache });
 		await operation({ value: 1 }, { cache });
@@ -99,7 +99,7 @@ describe('Operation', () => {
 			key: '',
 		});
 
-		const cache: OperationCacheMap = new Map();
+		const cache: OperationCache = new Map();
 
 		await operation({ value: 1 }, { cache });
 		await operation({ value: 1 }, { cache });

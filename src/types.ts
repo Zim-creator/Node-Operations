@@ -11,10 +11,12 @@ export type OperationMeta = {
 
 type Primitive = string | number | boolean | null | Date;
 
+export type BaseIOObject = {
+	[key: string]: Primitive | BaseIOObject | (BaseIOObject | Primitive)[];
+};
+
 export type BaseIO =
-	| {
-			[key: string]: Primitive | BaseIO | (BaseIO | Primitive)[];
-	  }
+	| BaseIOObject
 	| undefined
 	// biome-ignore lint/suspicious/noConfusingVoidType: expected void
 	| void

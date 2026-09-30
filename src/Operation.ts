@@ -16,14 +16,12 @@ type OperationConfigWithCache<TInput> = {
 
 type OperationConfigWithoutCache = {
 	cache?: false;
-	key?: string | undefined;
+	key?: never;
 };
 
-type OperationConfigCache<TInput> =
+export type OperationConfig<TInput> =
 	| OperationConfigWithCache<TInput>
 	| OperationConfigWithoutCache;
-
-export type OperationConfig<TInput> = {} & OperationConfigCache<TInput>;
 
 export function Operation<
 	TInput extends BaseIO = void,
@@ -37,7 +35,8 @@ export function Operation<
 	}
 
 	const { cache: shouldCache, key } = config || {};
-	const getKey = typeof key === 'function' ? key : () => key as string;
+
+	const getKey = typeof key === 'function' ? key : () => key;
 
 	const baseExecutable = async (
 		initialInput: TInput,
@@ -58,11 +57,19 @@ export function Operation<
 		const cachedResult = getFromCache<TResult>(ctx.cache, cacheKey);
 
 		if (cachedResult) {
-			console.log('CHACHED RESULT: ', ctx.cache.entries?.());
 			return cachedResult;
 		}
 
-		const executionPromise = Promise.resolve(handler(input, ctx));
+		const executionPromise = (async () => {
+			try {
+				return await handler(input, ctx);
+			} catch (err) {
+				// Remove from cache on failure so future calls can retry
+				ctx.cache.delete?.(cacheKey);
+				throw err;
+			}
+		})();
+
 		ctx.cache.set(cacheKey, executionPromise);
 
 		return executionPromise;
