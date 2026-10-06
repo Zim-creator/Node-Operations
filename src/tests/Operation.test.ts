@@ -34,7 +34,7 @@ describe('Operation', () => {
 		const cache: OperationCache = new Map();
 
 		const operation = Operation(async (input: { value: number }, ctx) => {
-			expect(ctx.cache).toBe(cache);
+			expect(ctx?.cache).toBe(cache);
 
 			return input;
 		});

@@ -24,8 +24,8 @@ export type OperationConfig<TInput> =
 	| OperationConfigWithoutCache;
 
 export function Operation<
-	TInput extends BaseIO = void,
-	TResult extends BaseIO = void,
+	TInput extends BaseIO = undefined,
+	TResult extends BaseIO = undefined,
 >(
 	handler: OperationHandler<TInput, TResult>,
 	config?: OperationConfig<TInput>,

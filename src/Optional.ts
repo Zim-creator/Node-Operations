@@ -8,8 +8,7 @@ import {
 type GeneratedResult<
 	TInput extends BaseIO,
 	TResult extends BaseIO,
-	// biome-ignore lint/suspicious/noConfusingVoidType: expected void
-	TExcludes = null | undefined | void | never,
+	TExcludes = null | undefined | never,
 > =
 	Exclude<TResult, TExcludes> extends never
 		? TInput

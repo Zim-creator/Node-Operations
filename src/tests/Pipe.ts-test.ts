@@ -2,6 +2,17 @@ import { Pipe } from '#src/Pipe';
 import { type OperationFunction } from '#src/types';
 import { type Equal, type Expect } from './Base.ts-test';
 
+const noInputPipe = Pipe([
+	() => ({
+		name: 'John',
+	}),
+	(input: { name: string }) => ({
+		label: input.name,
+	}),
+]);
+
+noInputPipe(undefined);
+
 const pipe = Pipe([
 	async (input: { id: string }) => ({
 		id: input.id,

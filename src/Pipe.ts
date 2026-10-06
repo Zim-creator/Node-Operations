@@ -3,7 +3,7 @@ import {
 	type BaseIO,
 	type Fn,
 	type OperationFunction,
-	type OperationHandler,
+	type PossibleCallback,
 } from '#src/types';
 
 type FirstInput<T> = T extends readonly Fn[]
@@ -38,10 +38,6 @@ type CompareFunc<
 						: Fn<FirstInput, Input[0]>
 			: First
 		: never;
-
-type PossibleCallback<In extends BaseIO = BaseIO, Out extends BaseIO = BaseIO> =
-	| OperationHandler<In, Out>
-	| OperationFunction<In, Out>;
 
 type ValidateFunctions<TFuncs> = TFuncs extends readonly [
 	infer First,

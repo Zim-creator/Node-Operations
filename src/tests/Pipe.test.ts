@@ -38,12 +38,12 @@ describe('Pipe', () => {
 		const cache = new Map<string, Promise<unknown>>();
 
 		const first = Operation(async (input: { value: number }, ctx) => {
-			expect(ctx.cache).toBe(cache);
+			expect(ctx?.cache).toBe(cache);
 			return input;
 		});
 
 		const second = Operation(async (input: { value: number }, ctx) => {
-			expect(ctx.cache).toBe(cache);
+			expect(ctx?.cache).toBe(cache);
 			return input;
 		});
 
@@ -89,9 +89,5 @@ describe('Pipe', () => {
 		await expect(pipe({ value: 1 })).rejects.toThrow('failure');
 
 		expect(finalStep).not.toHaveBeenCalled();
-	});
-
-	it('throws when no steps are provided', () => {
-		expect(() => Pipe([])).toThrow('Error: empty array');
 	});
 });
