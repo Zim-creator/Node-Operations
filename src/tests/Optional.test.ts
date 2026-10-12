@@ -42,8 +42,8 @@ describe('Optional', () => {
 		const cache = new Map<string, Promise<unknown>>();
 
 		const operation = Optional(
-			async (input: { value: number }, ctx: { cache?: object }) => {
-				expect(ctx.cache).toBe(cache);
+			async (input: { value: number }, ctx?: { cache?: object }) => {
+				expect(ctx?.cache).toBe(cache);
 
 				return input;
 			},

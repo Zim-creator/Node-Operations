@@ -2,7 +2,7 @@ import { Pipe } from '#src/Pipe';
 import { type OperationFunction } from '#src/types';
 import { type Equal, type Expect } from './Base.ts-test';
 
-const noInputPipe = Pipe([
+const voidInputPipe = Pipe([
 	() => ({
 		name: 'John',
 	}),
@@ -11,7 +11,11 @@ const noInputPipe = Pipe([
 	}),
 ]);
 
-noInputPipe(undefined);
+voidInputPipe();
+
+type VoidPipeType = Expect<
+	Equal<typeof voidInputPipe, OperationFunction<void, { label: string }>>
+>;
 
 const pipe = Pipe([
 	async (input: { id: string }) => ({

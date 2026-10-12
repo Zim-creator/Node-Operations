@@ -2,56 +2,59 @@ import { Operation, type OperationConfig } from '#src/Operation';
 import {
 	type BaseIO,
 	type BaseIOObject,
+	type Fn,
 	type OperationFunction,
 	type PossibleCallback,
 } from '#src/types';
 import { Optional } from './Optional.js';
 
+type ValidateFunc<TFunc> =
+	TFunc extends PossibleCallback<infer In, infer Out>
+		? [In, Out] extends BaseIO[]
+			? TFunc
+			: PossibleCallback
+		: PossibleCallback;
+
 type ValidateFunctions<TFuncs> = TFuncs extends readonly [
 	infer First,
 	...infer Rest,
 ]
-	? First extends PossibleCallback<infer In, infer Out>
-		? [In, Out] extends BaseIO[]
-			? Rest[0] extends PossibleCallback<infer _In, infer _Out>
-				? [First, ...ValidateFunctions<Rest>]
-				: [First]
-			: PossibleCallback[]
-		: [PossibleCallback, ...PossibleCallback[]]
+	? Rest extends readonly []
+		? [ValidateFunc<First>]
+		: [ValidateFunc<First>, ...ValidateFunctions<Rest>]
 	: [PossibleCallback, ...PossibleCallback[]];
 
-type CombineInputs2<TFuncs> = TFuncs extends readonly [
-	infer First,
-	...infer Rest,
-]
-	? First extends PossibleCallback<infer In, infer _Out>
-		? In extends BaseIO
-			? In extends BaseIOObject
-				? Rest[0] extends PossibleCallback<infer _In, infer _Out>
-					? In & CombineInputs<Rest>
-					: In
-				: CombineInputs<Rest>
-			: CombineInputs<Rest>
-		: never
-	: never;
+type ExtractObj<TObj> = TObj extends BaseIO
+	? undefined extends TObj
+		? undefined
+		: TObj
+	: undefined;
 
-type CombineInputs<TFuncs> = TFuncs extends readonly [
+type ValidateObjs<TFunc, TIn extends boolean> =
+	TFunc extends PossibleCallback<infer In, infer Out>
+		? TIn extends true
+			? ExtractObj<In>
+			: ExtractObj<Out>
+		: 1;
+
+type GetObjs<TFuncs, TIn extends boolean = false> = TFuncs extends readonly [
 	infer First,
 	...infer Rest,
 ]
-	? TFuncs extends readonly PossibleCallback<infer In, infer _out>[]
-		? In
-		: never
-	: never;
+	? Rest extends readonly []
+		? [ValidateObjs<First, TIn>]
+		: [ValidateObjs<First, TIn>, ...GetObjs<Rest, TIn>]
+	: [undefined];
 
 export function Parallel<
 	const TFuncs,
-	TInput extends BaseIO = CombineInputs<TFuncs>,
+	TInput = GetObjs<TFuncs, true>,
+	TResult = GetObjs<TFuncs>,
 >(
 	steps: TFuncs & ValidateFunctions<TFuncs>,
 	_config?: OperationConfig<TInput>,
-): OperationFunction<TInput, BaseIO> {
-	return Operation<TInput, BaseIO>(async (input) => {
+): OperationFunction<TInput, TResult> {
+	return Operation<TInput, TResult>(async (input) => {
 		const results = await Promise.all(
 			steps.map((step) => Optional(step)(input)),
 		);
@@ -61,15 +64,7 @@ export function Parallel<
 	});
 }
 
-const p1 = Parallel([]);
-
-const pa = Parallel([
-	async () => ({
-		name: 'John',
-	}),
-]);
-
-pa(undefined);
+const pa = Parallel([]);
 
 const pb = Parallel([
 	async (input: { id: string }) => ({
@@ -88,5 +83,3 @@ const pc = Parallel([
 		label: input.name,
 	}),
 ]);
-
-const a = pc(undefined);

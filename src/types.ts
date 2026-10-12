@@ -20,7 +20,7 @@ export type BaseIOObject = {
 	[key: string]: Primitive | BaseIOObject | (BaseIOObject | Primitive)[];
 };
 
-export type BaseIO = BaseIOObject | undefined | null;
+export type BaseIO = BaseIOObject | undefined | null | void;
 
 export type OperationContext = {
 	cache: OperationCache;

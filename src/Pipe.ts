@@ -8,7 +8,10 @@ import {
 
 type FirstInput<T> = T extends readonly Fn[]
 	? T[0] extends Fn<infer Args, infer _Result>
-		? Args[0]
+		? Args[0] extends void
+			? // biome-ignore lint/suspicious/noConfusingVoidType: expected void
+				void
+			: Args[0]
 		: never
 	: never;
 

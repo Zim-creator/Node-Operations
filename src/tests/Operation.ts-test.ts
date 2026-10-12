@@ -2,6 +2,16 @@ import { Operation } from '#src/Operation';
 import { type OperationFunction } from '#src/types';
 import { type Equal, type Expect } from './Base.ts-test';
 
+const voidOperation = Operation(async () => ({
+	name: 'Test',
+}));
+
+voidOperation();
+
+type VoidOperationType = Expect<
+	Equal<typeof voidOperation, OperationFunction<void, { name: string }>>
+>;
+
 const operation = Operation(async (input: { id: string }) => ({
 	name: input.id,
 }));
