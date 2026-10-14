@@ -8,78 +8,134 @@ import {
 } from '#src/types';
 import { Optional } from './Optional.js';
 
-type ValidateFunc<TFunc> =
+type ValidateIO<TIn, TCompare extends BaseIO> = TIn extends BaseIO
+	? TIn extends BaseIOObject
+		? TCompare extends BaseIOObject
+			? TIn extends Partial<TCompare>
+				? true
+				: false
+			: true
+		: true
+	: false;
+
+type ValidateFunc<TFunc, TInputs extends BaseIO, TResults extends BaseIO> =
 	TFunc extends PossibleCallback<infer In, infer Out>
-		? [In, Out] extends BaseIO[]
+		? [ValidateIO<In, TInputs>, ValidateIO<Out, TResults>] extends true[]
 			? TFunc
-			: PossibleCallback
+			: PossibleCallback<never, never>
 		: PossibleCallback;
 
-type ValidateFunctions<TFuncs> = TFuncs extends readonly [
-	infer First,
-	...infer Rest,
-]
+type ValidateFunctions<
+	TFuncs,
+	TInputs extends BaseIO,
+	TResults extends BaseIO,
+> = TFuncs extends readonly [infer First, ...infer Rest]
 	? Rest extends readonly []
-		? [ValidateFunc<First>]
-		: [ValidateFunc<First>, ...ValidateFunctions<Rest>]
+		? [ValidateFunc<First, TInputs, TResults>]
+		: [
+				ValidateFunc<First, TInputs, TResults>,
+				...ValidateFunctions<Rest, TInputs, TResults>,
+			]
 	: [PossibleCallback, ...PossibleCallback[]];
 
-type ExtractObj<TObj> = TObj extends BaseIO
-	? undefined extends TObj
-		? undefined
-		: TObj
-	: undefined;
-
-type ValidateObjs<TFunc, TIn extends boolean> =
-	TFunc extends PossibleCallback<infer In, infer Out>
+type GetObject<TFunc, TIn extends boolean> =
+	TFunc extends Fn<infer In, infer Out>
 		? TIn extends true
-			? ExtractObj<In>
-			: ExtractObj<Out>
-		: 1;
+			? In[0]
+			: Awaited<Out>
+		: never;
 
-type GetObjs<TFuncs, TIn extends boolean = false> = TFuncs extends readonly [
+type GetObjectsArray<TFuncs, TIn extends boolean> = TFuncs extends readonly [
 	infer First,
 	...infer Rest,
 ]
 	? Rest extends readonly []
-		? [ValidateObjs<First, TIn>]
-		: [ValidateObjs<First, TIn>, ...GetObjs<Rest, TIn>]
-	: [undefined];
+		? [GetObject<First, TIn>]
+		: [GetObject<First, TIn>, ...GetObjectsArray<Rest, TIn>]
+	: [];
+
+type RequiredOnly<TObjects extends unknown[]> = TObjects extends readonly [
+	infer First,
+	...infer Rest,
+]
+	? First extends BaseIOObject
+		? [First, ...RequiredOnly<Rest>]
+		: RequiredOnly<Rest>
+	: [];
+
+type CombineObjects<TObjects extends unknown[]> = TObjects extends readonly [
+	infer First,
+	...infer Rest,
+]
+	? First & CombineObjects<Rest>
+	: // biome-ignore lint/complexity/noBannedTypes: expected
+		{};
+
+type GetInputs<
+	TFuncs,
+	TObjects extends unknown[] = GetObjectsArray<TFuncs, true>,
+	TRequired extends BaseIOObject[] = RequiredOnly<TObjects>,
+	// biome-ignore lint/suspicious/noConfusingVoidType: expected
+> = TRequired extends readonly [] ? void : CombineObjects<TRequired>;
+
+type GetResults<
+	TFuncs,
+	TObjects extends unknown[] = GetObjectsArray<TFuncs, false>,
+	TRequired extends BaseIOObject[] = RequiredOnly<TObjects>,
+> = TRequired extends readonly [] ? undefined : CombineObjects<TRequired>;
 
 export function Parallel<
 	const TFuncs,
-	TInput = GetObjs<TFuncs, true>,
-	TResult = GetObjs<TFuncs>,
+	TInput extends BaseIO = GetInputs<TFuncs>,
+	TResult extends BaseIO = GetResults<TFuncs>,
 >(
-	steps: TFuncs & ValidateFunctions<TFuncs>,
+	steps: TFuncs & ValidateFunctions<TFuncs, TInput, TResult>,
 	_config?: OperationConfig<TInput>,
 ): OperationFunction<TInput, TResult> {
-	return Operation<TInput, TResult>(async (input) => {
+	return Operation(async (input?: TInput) => {
 		const results = await Promise.all(
 			steps.map((step) => Optional(step)(input)),
 		);
 
-		// biome-ignore lint/performance/noAccumulatingSpread: expected
-		return results.reduce((acc, result) => ({ ...acc, ...result }), {});
-	});
+		return results.reduce((acc, result) => {
+			if (!result) return acc;
+
+			if (!acc) {
+				acc = {};
+			}
+
+			// biome-ignore lint/performance/noAccumulatingSpread: expected
+			return { ...acc, ...result };
+		}, undefined);
+	}) as OperationFunction<TInput, TResult>;
 }
 
-const pa = Parallel([]);
+// const pa = Parallel([]);
 
 const pb = Parallel([
-	async (input: { id: string }) => ({
+	async (input: { id: string; name: number }) => ({
+		id: input.id,
+		name: 'asd',
+		s: 22,
+	}),
+	(input: { id: string }) => ({
 		id: input.id,
 		name: 'John',
 	}),
 ]);
 
 const pc = Parallel([
-	() => ({}),
-	async (input: { id: string }) => ({
+	() => ({ b: 'asd' }),
+	(input: { id: string }) => ({
 		id: input.id,
 		name: 'John',
 	}),
-	async (input: { id: number; name: string }) => ({
-		label: input.name,
-	}),
+	// async (input: { id: number }) => ({
+	// 	label: input.id,
+	// }),
+	// async (input: { id: boolean }) => ({
+	// 	label: input.id,
+	// }),
 ]);
+
+const pd = Parallel([(i: { a: string }) => {}]);
