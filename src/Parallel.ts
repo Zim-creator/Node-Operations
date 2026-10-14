@@ -8,34 +8,61 @@ import {
 } from '#src/types';
 import { Optional } from './Optional.js';
 
-type ValidateIO<TIn, TCompare extends BaseIO> = TIn extends BaseIO
-	? TIn extends BaseIOObject
-		? TCompare extends BaseIOObject
-			? TIn extends Partial<TCompare>
-				? true
-				: false
-			: true
-		: true
-	: false;
+type IsNever<T> = [T] extends [never] ? true : false;
 
-type ValidateFunc<TFunc, TInputs extends BaseIO, TResults extends BaseIO> =
-	TFunc extends PossibleCallback<infer In, infer Out>
-		? [ValidateIO<In, TInputs>, ValidateIO<Out, TResults>] extends true[]
+type IsSame<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+
+// A step that never returns (or takes `never`) can't conflict with anything
+type SharedKeys<A, B> = true extends IsNever<A> | IsNever<B>
+	? never
+	: keyof A & keyof B & string;
+
+// Paths of fields that no single input value can satisfy for both steps
+type InputFieldConflicts<A, B, TPath extends string> =
+	IsNever<A & B> extends true
+		? TPath
+		: [A, B] extends [readonly (infer ItemA)[], readonly (infer ItemB)[]]
+			? InputFieldConflicts<ItemA, ItemB, `${TPath}[]`>
+			: [A, B] extends [BaseIOObject, BaseIOObject]
+				? InputConflicts<A, B, `${TPath}.`>
+				: never;
+
+type InputConflicts<A, B, TPrefix extends string = ''> = {
+	[K in SharedKeys<A, B>]: InputFieldConflicts<A[K], B[K], `${TPrefix}${K}`>;
+}[SharedKeys<A, B>];
+
+// Results are merged shallowly, so a shared field must have the same type
+type ResultConflicts<A, B> = [A, B] extends [BaseIOObject, BaseIOObject]
+	? {
+			[K in SharedKeys<A, B>]: IsSame<A[K], B[K]> extends true
+				? never
+				: K;
+		}[SharedKeys<A, B>]
+	: never;
+
+type StepIndex<TFuncs> = Extract<keyof TFuncs, `${number}`>;
+
+type StepErrors<TFuncs, I extends keyof TFuncs> = {
+	[J in Exclude<StepIndex<TFuncs>, I>]:
+		| `Parallel: input field "${InputConflicts<
+				GetObject<TFuncs[I], true>,
+				GetObject<TFuncs[J & keyof TFuncs], true>
+		  >}" conflicts with steps[${J}]`
+		| `Parallel: result field "${ResultConflicts<
+				GetObject<TFuncs[I], false>,
+				GetObject<TFuncs[J & keyof TFuncs], false>
+		  >}" conflicts with steps[${J}]`;
+}[Exclude<StepIndex<TFuncs>, I>];
+
+type ValidateFunc<TFunc, TErrors> =
+	TFunc extends PossibleCallback<infer _In, infer _Out>
+		? IsNever<TErrors> extends true
 			? TFunc
-			: PossibleCallback<never, never>
+			: TErrors
 		: PossibleCallback;
 
-type ValidateFunctions<
-	TFuncs,
-	TInputs extends BaseIO,
-	TResults extends BaseIO,
-> = TFuncs extends readonly [infer First, ...infer Rest]
-	? Rest extends readonly []
-		? [ValidateFunc<First, TInputs, TResults>]
-		: [
-				ValidateFunc<First, TInputs, TResults>,
-				...ValidateFunctions<Rest, TInputs, TResults>,
-			]
+type ValidateFunctions<TFuncs> = TFuncs extends readonly [unknown, ...unknown[]]
+	? { [I in keyof TFuncs]: ValidateFunc<TFuncs[I], StepErrors<TFuncs, I>> }
 	: [PossibleCallback, ...PossibleCallback[]];
 
 type GetObject<TFunc, TIn extends boolean> =
@@ -89,7 +116,7 @@ export function Parallel<
 	TInput extends BaseIO = GetInputs<TFuncs>,
 	TResult extends BaseIO = GetResults<TFuncs>,
 >(
-	steps: TFuncs & ValidateFunctions<TFuncs, TInput, TResult>,
+	steps: TFuncs & ValidateFunctions<TFuncs>,
 	_config?: OperationConfig<TInput>,
 ): OperationFunction<TInput, TResult> {
 	return Operation(async (input?: TInput) => {
@@ -109,33 +136,3 @@ export function Parallel<
 		}, undefined);
 	}) as OperationFunction<TInput, TResult>;
 }
-
-// const pa = Parallel([]);
-
-const pb = Parallel([
-	async (input: { id: string; name: number }) => ({
-		id: input.id,
-		name: 'asd',
-		s: 22,
-	}),
-	(input: { id: string }) => ({
-		id: input.id,
-		name: 'John',
-	}),
-]);
-
-const pc = Parallel([
-	() => ({ b: 'asd' }),
-	(input: { id: string }) => ({
-		id: input.id,
-		name: 'John',
-	}),
-	// async (input: { id: number }) => ({
-	// 	label: input.id,
-	// }),
-	// async (input: { id: boolean }) => ({
-	// 	label: input.id,
-	// }),
-]);
-
-const pd = Parallel([(i: { a: string }) => {}]);
