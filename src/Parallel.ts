@@ -18,11 +18,22 @@ type ValidateIO<TIn, TCompare extends BaseIO> = TIn extends BaseIO
 		: true
 	: false;
 
+type ExtractIncompatibleParams<
+	TObj extends BaseIO,
+	TCompare extends BaseIO,
+	TResult = [TObj, TCompare] extends BaseIOObject[]
+		? { [K in Extract<keyof TCompare, keyof TObj>]: TCompare[K] }
+		: never,
+> = TResult extends BaseIOObject ? TResult : never;
+
 type ValidateFunc<TFunc, TInputs extends BaseIO, TResults extends BaseIO> =
 	TFunc extends PossibleCallback<infer In, infer Out>
 		? [ValidateIO<In, TInputs>, ValidateIO<Out, TResults>] extends true[]
 			? TFunc
-			: PossibleCallback<never, never>
+			: PossibleCallback<
+					ExtractIncompatibleParams<In, TInputs>,
+					ExtractIncompatibleParams<Out, TResults>
+				>
 		: PossibleCallback;
 
 type ValidateFunctions<
@@ -109,33 +120,3 @@ export function Parallel<
 		}, undefined);
 	}) as OperationFunction<TInput, TResult>;
 }
-
-// const pa = Parallel([]);
-
-const pb = Parallel([
-	async (input: { id: string; name: number }) => ({
-		id: input.id,
-		name: 'asd',
-		s: 22,
-	}),
-	(input: { id: string }) => ({
-		id: input.id,
-		name: 'John',
-	}),
-]);
-
-const pc = Parallel([
-	() => ({ b: 'asd' }),
-	(input: { id: string }) => ({
-		id: input.id,
-		name: 'John',
-	}),
-	// async (input: { id: number }) => ({
-	// 	label: input.id,
-	// }),
-	// async (input: { id: boolean }) => ({
-	// 	label: input.id,
-	// }),
-]);
-
-const pd = Parallel([(i: { a: string }) => {}]);

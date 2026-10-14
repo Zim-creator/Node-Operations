@@ -20,6 +20,7 @@ export type BaseIOObject = {
 	[key: string]: Primitive | BaseIOObject | (BaseIOObject | Primitive)[];
 };
 
+// biome-ignore lint/suspicious/noConfusingVoidType: expected
 export type BaseIO = BaseIOObject | undefined | null | void;
 
 export type OperationContext = {
