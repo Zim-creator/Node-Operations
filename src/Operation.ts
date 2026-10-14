@@ -3,8 +3,8 @@ import {
 	type BaseIO,
 	type OperationContext,
 	type OperationFunction,
-	type OperationHandler,
 	type OperationMeta,
+	type PossibleCallback,
 } from '#src/types';
 import { getFromCache } from '#src/utils/getFromCache';
 import { isOperation } from '#src/utils/isOperation';
@@ -27,7 +27,7 @@ export function Operation<
 	TInput extends BaseIO = void,
 	TResult extends BaseIO = void,
 >(
-	handler: OperationHandler<TInput, TResult>,
+	handler: PossibleCallback<TInput, TResult>,
 	config?: OperationConfig<TInput>,
 ): OperationFunction<TInput, TResult> {
 	if (isOperation<TInput, TResult>(handler)) {

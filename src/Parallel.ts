@@ -6,7 +6,6 @@ import {
 	type OperationFunction,
 	type PossibleCallback,
 } from '#src/types';
-import { Optional } from './Optional.js';
 
 type ValidateIO<TIn, TCompare extends BaseIO> = TIn extends BaseIO
 	? TIn extends BaseIOObject
@@ -101,11 +100,11 @@ export function Parallel<
 	TResult extends BaseIO = GetResults<TFuncs>,
 >(
 	steps: TFuncs & ValidateFunctions<TFuncs, TInput, TResult>,
-	_config?: OperationConfig<TInput>,
+	config?: OperationConfig<TInput>,
 ): OperationFunction<TInput, TResult> {
-	return Operation(async (input?: TInput) => {
+	return Operation(async (input: TInput, ctx) => {
 		const results = await Promise.all(
-			steps.map((step) => Optional(step)(input)),
+			steps.map((step) => Operation(step)(input, ctx)),
 		);
 
 		return results.reduce((acc, result) => {
@@ -118,5 +117,7 @@ export function Parallel<
 			// biome-ignore lint/performance/noAccumulatingSpread: expected
 			return { ...acc, ...result };
 		}, undefined);
-	}) as OperationFunction<TInput, TResult>;
+	}, config) as OperationFunction<TInput, TResult>;
 }
+
+// const a = Parallel([(i?: { b: string }) => {}, (i?: { b: string }) => {}]);

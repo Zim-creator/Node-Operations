@@ -3,13 +3,13 @@ import { Operation } from '#src/Operation';
 import { Parallel } from '#src/Parallel';
 
 describe('Parallel', () => {
-	it.todo('returns an operation', async () => {
+	it('returns an operation', async () => {
 		const parallel = Parallel([async (input: { id: string }) => input]);
 
 		expect(parallel.__isOperation).toBe(true);
 	});
 
-	it.todo('executes all steps with the same input', async () => {
+	it('executes all steps with the same input', async () => {
 		const first = vi.fn(async (input: { id: string }) => ({
 			name: `user-${input.id}`,
 		}));
@@ -27,7 +27,7 @@ describe('Parallel', () => {
 		expect(second).toHaveBeenCalledWith({ id: '1' }, expect.any(Object));
 	});
 
-	it.todo('merges results from all steps', async () => {
+	it('merges results from all steps', async () => {
 		const parallel = Parallel([
 			async (_input: { id: string }) => ({
 				name: 'John',
@@ -43,7 +43,7 @@ describe('Parallel', () => {
 		});
 	});
 
-	it.todo('executes steps concurrently', async () => {
+	it('executes steps concurrently', async () => {
 		let resolveFirst!: () => void;
 		let resolveSecond!: () => void;
 
@@ -91,11 +91,11 @@ describe('Parallel', () => {
 		});
 	});
 
-	it.todo('shares the same context between steps', async () => {
+	it('shares the same context between steps', async () => {
 		const cache = new Map<string, Promise<unknown>>();
 
 		const first = Operation(async (input: { id: string }, ctx) => {
-			expect(ctx.cache).toBe(cache);
+			expect(ctx?.cache).toBe(cache);
 
 			return {
 				first: input.id,
@@ -103,7 +103,7 @@ describe('Parallel', () => {
 		});
 
 		const second = Operation(async (input: { id: string }, ctx) => {
-			expect(ctx.cache).toBe(cache);
+			expect(ctx?.cache).toBe(cache);
 
 			return {
 				second: input.id,
@@ -115,7 +115,7 @@ describe('Parallel', () => {
 		await parallel({ id: '1' }, { cache });
 	});
 
-	it.todo('supports different input requirements between steps', async () => {
+	it('supports different input requirements between steps', async () => {
 		const parallel = Parallel([
 			async (input: { id: string }) => ({
 				id: input.id,
@@ -136,7 +136,7 @@ describe('Parallel', () => {
 		});
 	});
 
-	it.todo('propagates an error when a step fails', async () => {
+	it('propagates an error when a step fails', async () => {
 		const error = new Error('failure');
 
 		const parallel = Parallel([
@@ -151,7 +151,7 @@ describe('Parallel', () => {
 		await expect(parallel({ id: '1' })).rejects.toBe(error);
 	});
 
-	it.todo('supports operation configuration', async () => {
+	it('supports operation configuration', async () => {
 		const handler = vi.fn(async (_input: { id: string }) => ({
 			value: true,
 		}));
