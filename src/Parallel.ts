@@ -161,8 +161,3 @@ export function Parallel<
 		}, undefined);
 	}, config) as OperationFunction<TInput, TResult>;
 }
-
-const a = Parallel([
-	(input: { data: { name: string } }) => ({}),
-	(input: { data: {} }) => ({}),
-]);

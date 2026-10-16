@@ -32,6 +32,10 @@
 			"types": "./dist/Pipe.d.ts",
 			"import": "./dist/Pipe.js"
 		},
+		"./parallel": {
+			"types": "./dist/Parallel.d.ts",
+			"import": "./dist/Parallel.js"
+		},
 		"./store": {
 			"types": "./dist/store.d.ts",
 			"import": "./dist/store.js"
