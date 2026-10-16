@@ -7,96 +7,138 @@ import {
 	type PossibleCallback,
 } from '#src/types';
 
-type ValidateIO<TIn, TCompare extends BaseIO> = TIn extends BaseIO
-	? TIn extends BaseIOObject
-		? TCompare extends BaseIOObject
-			? TIn extends Partial<TCompare>
-				? true
-				: false
-			: true
-		: true
-	: false;
+type ValidatedIO<TObj, TCompare> = [TCompare] extends [BaseIOObject]
+	? [TObj] extends [BaseIOObject]
+		? {
+				[K in keyof TObj]: K extends keyof TCompare
+					? [TCompare[K]] extends [never]
+						? {
+								__error: 'Conflicting property';
+								property: K;
+							}
+						: TObj[K]
+					: never;
+			}
+		: TObj
+	: TObj;
 
-type ExtractIncompatibleParams<
-	TObj extends BaseIO,
-	TCompare extends BaseIO,
-	TResult = [TObj, TCompare] extends BaseIOObject[]
-		? { [K in Extract<keyof TCompare, keyof TObj>]: TCompare[K] }
-		: never,
-> = TResult extends BaseIOObject ? TResult : never;
-
-type ValidateFunc<TFunc, TInputs extends BaseIO, TResults extends BaseIO> =
-	TFunc extends PossibleCallback<infer In, infer Out>
-		? [ValidateIO<In, TInputs>, ValidateIO<Out, TResults>] extends true[]
-			? TFunc
-			: PossibleCallback<
-					ExtractIncompatibleParams<In, TInputs>,
-					ExtractIncompatibleParams<Out, TResults>
-				>
+type ValidateFunc<TFunc, TInput, TResult> =
+	TFunc extends Fn<infer Ins, infer Outs>
+		? Ins[0] extends infer In extends BaseIO
+			? Awaited<Outs> extends infer Out extends BaseIO
+				? PossibleCallback<
+						ValidatedIO<In, TInput>,
+						ValidatedIO<Out, TResult>
+					>
+				: PossibleCallback<In>
+			: PossibleCallback
 		: PossibleCallback;
 
-type ValidateFunctions<
-	TFuncs,
-	TInputs extends BaseIO,
-	TResults extends BaseIO,
-> = TFuncs extends readonly [infer First, ...infer Rest]
-	? Rest extends readonly []
-		? [ValidateFunc<First, TInputs, TResults>]
-		: [
-				ValidateFunc<First, TInputs, TResults>,
-				...ValidateFunctions<Rest, TInputs, TResults>,
-			]
+type ValidateFunctions<TFuncs, TInput, TResult> = TFuncs extends readonly [
+	unknown,
+	...unknown[],
+]
+	? {
+			[I in keyof TFuncs]: ValidateFunc<TFuncs[I], TInput, TResult>;
+		}
 	: [PossibleCallback, ...PossibleCallback[]];
 
-type GetObject<TFunc, TIn extends boolean> =
-	TFunc extends Fn<infer In, infer Out>
-		? TIn extends true
-			? In[0]
-			: Awaited<Out>
-		: never;
+// 1. Extract inputs or results into a tuple
 
-type GetObjectsArray<TFuncs, TIn extends boolean> = TFuncs extends readonly [
-	infer First,
-	...infer Rest,
-]
-	? Rest extends readonly []
-		? [GetObject<First, TIn>]
-		: [GetObject<First, TIn>, ...GetObjectsArray<Rest, TIn>]
+type GetIO<TFuncs, TIO extends boolean> = TFuncs extends readonly Fn[]
+	? {
+			[I in keyof TFuncs]: TFuncs[I] extends Fn<infer In, infer Out>
+				? TIO extends true
+					? In extends []
+						? undefined
+						: In[0]
+					: Awaited<Out>
+				: never;
+		}
 	: [];
 
-type RequiredOnly<TObjects extends unknown[]> = TObjects extends readonly [
+// 2. Extract required objects
+
+type RequiredObjects<T extends readonly unknown[]> = T extends readonly [
 	infer First,
 	...infer Rest,
 ]
-	? First extends BaseIOObject
-		? [First, ...RequiredOnly<Rest>]
-		: RequiredOnly<Rest>
+	? [First] extends [BaseIOObject]
+		? [First, ...RequiredObjects<Rest>]
+		: RequiredObjects<Rest>
 	: [];
 
-type CombineObjects<TObjects extends unknown[]> = TObjects extends readonly [
+// 3. Extract optional objects
+
+type OptionalObjects<T extends readonly unknown[]> = T extends readonly [
 	infer First,
 	...infer Rest,
 ]
-	? First & CombineObjects<Rest>
+	? [NonNullable<First>] extends [never]
+		? OptionalObjects<Rest>
+		: [NonNullable<First>] extends [BaseIOObject]
+			? [First] extends [BaseIOObject]
+				? OptionalObjects<Rest>
+				: [NonNullable<First>, ...OptionalObjects<Rest>]
+			: OptionalObjects<Rest>
+	: [];
+
+// 4. Combine objects using intersection
+
+type DeepIntersect<A, B> = {
+	[K in keyof A | keyof B]: K extends keyof A
+		? K extends keyof B
+			? [A[K]] extends [BaseIOObject]
+				? [B[K]] extends [BaseIOObject]
+					? DeepIntersect<A[K], B[K]>
+					: never
+				: [B[K]] extends [BaseIOObject]
+					? never
+					: A[K] & B[K]
+			: A[K]
+		: K extends keyof B
+			? B[K]
+			: never;
+};
+
+type IntersectAll<T extends readonly unknown[]> = T extends readonly [
+	infer First,
+	...infer Rest,
+]
+	? DeepIntersect<First, IntersectAll<Rest>>
 	: // biome-ignore lint/complexity/noBannedTypes: expected
 		{};
 
-type GetInputs<
-	TFuncs,
-	TObjects extends unknown[] = GetObjectsArray<TFuncs, true>,
-	TRequired extends BaseIOObject[] = RequiredOnly<TObjects>,
-	// biome-ignore lint/suspicious/noConfusingVoidType: expected
-> = TRequired extends readonly [] ? void : CombineObjects<TRequired>;
+type Simplify<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
 
-type GetResults<
-	TFuncs,
-	TObjects extends unknown[] = GetObjectsArray<TFuncs, false>,
-	TRequired extends BaseIOObject[] = RequiredOnly<TObjects>,
-> = TRequired extends readonly [] ? undefined : CombineObjects<TRequired>;
+// 5. Merge required and optional objects
+
+type MergeIO<T extends readonly unknown[]> =
+	RequiredObjects<T> extends infer R extends readonly unknown[]
+		? OptionalObjects<T> extends infer O extends readonly unknown[]
+			? R extends []
+				? O extends []
+					? undefined
+					: Simplify<Partial<IntersectAll<O>>> | undefined
+				: O extends []
+					? Simplify<IntersectAll<R>>
+					: Simplify<IntersectAll<R> & Partial<IntersectAll<O>>>
+			: never
+		: never;
+
+// 6. Final types
+
+type GetInputs<TFuncs> = Extract<MergeIO<GetIO<TFuncs, true>>, BaseIO>;
+
+type GetResults<TFuncs> = Extract<MergeIO<GetIO<TFuncs, false>>, BaseIO>;
 
 export function Parallel<
 	const TFuncs,
-	TInput extends BaseIO = GetInputs<TFuncs>,
+	TInput extends BaseIO = GetInputs<TFuncs> extends infer Input extends BaseIO
+		? [Input] extends [undefined]
+			? void
+			: Input
+		: void,
 	TResult extends BaseIO = GetResults<TFuncs>,
 >(
 	steps: TFuncs & ValidateFunctions<TFuncs, TInput, TResult>,
@@ -120,4 +162,7 @@ export function Parallel<
 	}, config) as OperationFunction<TInput, TResult>;
 }
 
-// const a = Parallel([(i?: { b: string }) => {}, (i?: { b: string }) => {}]);
+const a = Parallel([
+	(input: { data: { name: string } }) => ({}),
+	(input: { data: {} }) => ({}),
+]);
