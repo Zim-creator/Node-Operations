@@ -6,8 +6,19 @@ Reusable, typed operations for Node.js and Next.js.
 
 ## Installation
 
+# Install v1.0.0
 ```bash
-yarn add github:Zim-creator/Node-Operations
+yarn add '@zim-creator/node-operations@github:Zim-creator/Node-Operations#tag=v1.0.0'
+```
+
+# Install a compatible release
+```bash
+yarn add '@zim-creator/node-operations@github:Zim-creator/Node-Operations#semver=^1.0.0'
+```
+
+# Install directly from main (development)
+```bash
+yarn add '@zim-creator/node-operations@github:Zim-creator/Node-Operations#head=main'
 ```
 
 ## Core concepts

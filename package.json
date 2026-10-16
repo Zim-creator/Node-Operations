@@ -1,6 +1,6 @@
 {
 	"name": "@zim-creator/node-operations",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"description": "Reusable backend utilities for Node.js and Next.js",
 	"type": "module",
 	"license": "MIT",
