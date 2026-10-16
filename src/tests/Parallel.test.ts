@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Operation } from '#src/Operation';
 import { Parallel } from '#src/Parallel';
+import { type BaseIO } from '#src/types';
 
 describe('Parallel', () => {
 	it('returns an operation', async () => {
@@ -143,7 +144,7 @@ describe('Parallel', () => {
 			async (_input: { id: string }) => ({
 				first: true,
 			}),
-			async (_input: { id: string }) => {
+			async (_input: { id: string }): Promise<BaseIO> => {
 				throw error;
 			},
 		]);

@@ -1,311 +1,268 @@
 # Node Operations
 
-Reusable typed operations for Node.js and Next.js.
+Reusable, typed operations for Node.js and Next.js.
 
-`@zim-creator/node-operations` provides small composable primitives for building backend workflows with predictable input/output types, shared execution context, optional caching, and type-safe pipelines.
+`@zim-creator/node-operations` provides composable primitives for backend workflows: typed async functions, sequential and parallel composition, optional steps, shared execution context, and opt-in promise caching.
 
-install: yarn add github:Zim-creator/Node-Operations
+## Installation
+
+```bash
+yarn add github:Zim-creator/Node-Operations
+```
 
 ## Core concepts
 
-An **Operation** is an async function with:
+An **Operation** is an asynchronous function with typed input and output, an optional execution context, and metadata (`__isOperation`) identifying it as an operation.
 
-- typed input
-- typed output
-- shared operation context
-- optional cache support
-- metadata that identifies it as an operation
+Use:
 
-Operations can be composed with utilities such as `Pipe` and `Optional`.
+- **`Operation`** to wrap a handler and optionally cache its execution.
+- **`Pipe`** to pass each step's result into the next step.
+- **`Parallel`** to run steps concurrently with the same input and combine their results.
+- **`Optional`** to make a step fall back to its input on failure or a nullish result.
 
 ## Operation
 
-Create an operation from a handler:
-
 ```ts
 import { Operation } from '@zim-creator/node-operations';
 
-const getUser = Operation(async ({ id }: { id: string }) => {
-	return {
-		id,
-		name: 'John',
-	};
-});
-```
+const getUser = Operation(async ({ id }: { id: string }) => ({
+  id,
+  name: 'John',
+}));
 
-Operations always return a `Promise`.
-
-```ts
 const user = await getUser({ id: '1' });
 ```
 
-### Context
+Operations always return a `Promise`. The handler may be synchronous or asynchronous.
 
-Every operation receives an execution context as its second argument.
+### Execution context
+
+The handler receives a context as its second argument. Composed operations forward that context to their steps.
 
 ```ts
-const operation = Operation(async (input, ctx) => {
-	console.log(ctx.cache);
-
-	return input;
+const inspect = Operation(async (input: { id: string }, ctx) => {
+  console.log(ctx?.cache);
+  return input;
 });
 ```
 
-The context can be passed between composed operations.
+### Caching
 
-## Caching
-
-Caching can be enabled with `cache: true` and a cache key.
+Caching is opt-in and requires a non-empty key, either static or derived from the input.
 
 ```ts
-const getUser = Operation(
-	async ({ id }: { id: string }) => {
-		return {
-			id,
-			name: 'John',
-		};
-	},
-	{
-		cache: true,
-		key: ({ id }) => `user:${id}`,
-	},
+const cachedUser = Operation(
+  async ({ id }: { id: string }) => ({ id, name: 'John' }),
+  {
+    cache: true,
+    key: ({ id }) => `user:${id}`,
+  },
 );
 ```
 
-A static key can also be used:
+The cache stores promises, so calls using the same key and cache can share an in-flight execution. Failed executions are removed from the cache. A static key is useful for a handler whose result is independent of its input.
 
-```ts
-const getConfig = Operation(
-	async () => {
-		return {
-			featureEnabled: true,
-		};
-	},
-	{
-		cache: true,
-		key: 'config',
-	},
-);
-```
+**Cache keys share a namespace within a cache.** Prefix keys or otherwise ensure uniqueness when different operations share the same cache. Collisions are caller-managed. An empty key disables caching.
 
-Cache entries store execution promises, allowing concurrent executions with the same key and context to share the same operation result.
-
-An empty key disables caching.
-
-### Cache factory with React
-
-By default, each operation call without an explicit cache creates a new `Map`. Use `setOperationCacheFactory` to control how those calls obtain their cache.
-
-For React Server Components (including Next.js), configure the factory once at module scope in a shared server module, before calling operations:
-
-```ts
-import { cache } from 'react';
-import { Operation } from '@zim-creator/node-operations';
-import { setOperationCacheFactory } from '@zim-creator/node-operations/store';
-
-setOperationCacheFactory(
-	cache(() => new Map<string, Promise<unknown>>()),
-);
-
-export const getCachedUser = Operation(
-	async ({ id }: { id: string }) => ({ id, name: 'John' }),
-	{
-		cache: true,
-		key: ({ id }) => `user:${id}`,
-	},
-);
-```
-
-Import that operation into a Server Component:
-
-```tsx
-import { getCachedUser } from './operations';
-
-export default async function UserPage() {
-	const [user, sameUser] = await Promise.all([
-		getCachedUser({ id: '1' }),
-		getCachedUser({ id: '1' }),
-	]);
-
-	// Both calls share one handler execution and resolve to the same result.
-	return <p>{user.name}</p>;
-}
-```
-
-React's `cache` shares the map within a server request and invalidates it for each new request. This requires the React Server Component cache context; calls outside that context do not share the map through React. See the [React cache documentation](https://react.dev/reference/react/cache).
-
-Operations still need `cache: true` and a non-empty key. Keys share a namespace within the map, so include an operation prefix and all inputs that affect the result. An explicitly supplied `ctx.cache` takes precedence over the factory.
-
-### Existing operations
-
-Calling `Operation` with an existing operation returns that operation unchanged.
-
-```ts
-const original = Operation(async (input: { id: string }) => input);
-
-const sameOperation = Operation(original);
-```
-
-An existing operation keeps its original configuration. New configuration passed while wrapping it does not replace its existing behavior.
-
-## Pipe
-
-`Pipe` executes operations sequentially.
-
-The result of each step becomes the input of the next step.
-
-```ts
-import { Operation, Pipe } from '@zim-creator/node-operations';
-
-const getUser = Operation(async ({ id }: { id: string }) => {
-	return {
-		id,
-		name: 'John',
-	};
-});
-
-const getProfile = Operation(async (user: { id: string; name: string }) => {
-	return {
-		...user,
-		profileUrl: `/users/${user.id}`,
-	};
-});
-
-const getUserProfile = Pipe([
-	getUser,
-	getProfile,
-]);
-
-const profile = await getUserProfile({ id: '1' });
-```
-
-`Pipe` validates compatible input and output types between steps at compile time.
-
-An empty pipeline is not allowed.
-
-## Optional
-
-`Optional` converts an operation into a non-blocking step.
-
-If the wrapped handler:
-
-- returns a value, that value is returned
-- returns `null` or `undefined`, the original input is returned
-- throws an error, the original input is returned
-
-```ts
-import { Operation, Optional, Pipe } from '@zim-creator/node-operations';
-
-const enrichUser = Optional(
-	Operation(async (user: { id: string; name: string }) => {
-		const enrichment = await loadOptionalData(user.id);
-
-		if (!enrichment) {
-			return undefined;
-		}
-
-		return {
-			...user,
-			...enrichment,
-		};
-	}),
-);
-
-const processUser = Pipe([
-	enrichUser,
-]);
-```
-
-This makes `Optional` useful for pipeline steps that should not interrupt the remaining workflow when they cannot produce a result.
-
-## BaseIO
-
-Operation inputs and outputs are designed around object-based data.
-
-A top-level `BaseIO` value is an object, or an empty result represented by `null`, `undefined`, or `void`.
-
-Objects can contain:
-
-- strings
-- numbers
-- booleans
-- `null`
-- `Date`
-- nested objects
-- arrays containing supported values
-
-Example:
-
-```ts
-type UserInput = {
-	id: string;
-	options: {
-		active: boolean;
-	};
-	tags: string[];
-	createdAt: Date;
-};
-```
-
-Primitive values such as `string` or `number` are not intended to be used directly as top-level operation input or output.
-
-## Shared cache context
-
-A cache can be provided manually through the operation context.
+By default, `getOperationCache()` creates a new `Map` for each invocation. To share results across calls, supply the same cache via context or configure a cache factory.
 
 ```ts
 const cache = new Map<string, Promise<unknown>>();
 
-await getUser(
-	{ id: '1' },
-	{
-		cache,
-	},
+await cachedUser({ id: '1' }, { cache });
+await cachedUser({ id: '1' }, { cache }); // Reuses the promise
+```
+
+### Cache factory for React Server Components
+
+To share a cache within a React server request (for example in Next.js), configure the factory in a shared server module:
+
+```ts
+import { cache } from 'react';
+import { setOperationCacheFactory } from '@zim-creator/node-operations/store';
+
+setOperationCacheFactory(
+  cache(() => new Map<string, Promise<unknown>>()),
 );
 ```
 
-Passing the same cache to multiple operations allows them to share cached executions.
+React's `cache` provides request-scoped sharing in the supported server rendering context; outside that context, it does not provide the same sharing guarantee. An explicitly provided `ctx.cache` takes precedence over the factory.
 
-## Exports
+### Wrapping existing operations
 
-Main package exports:
+Passing an existing operation to `Operation` returns the same operation unchanged:
+
+```ts
+const sameOperation = Operation(cachedUser);
+console.log(sameOperation === cachedUser); // true
+```
+
+New configuration supplied while wrapping an existing operation does **not** replace the original configuration.
+
+## Pipe
+
+`Pipe` executes steps sequentially. Each step's result becomes the next step's input.
+
+```ts
+import { Pipe } from '@zim-creator/node-operations';
+
+const getProfile = Pipe([
+  async (input: { id: string }) => ({
+    id: input.id,
+    name: 'John',
+  }),
+  (user: { id: string; name: string }) => ({
+    label: `${user.name} (${user.id})`,
+  }),
+]);
+
+const profile = await getProfile({ id: '1' });
+// { label: 'John (1)' }
+```
+
+The public input type comes from the first step, and the result type comes from the last step. `Pipe` performs compile-time checks of adjacent step types. An empty pipeline is not allowed.
+
+## Parallel
+
+`Parallel` executes all steps concurrently using `Promise.all`. Every step receives **the same input and context**, rather than the previous step's output. Results are combined in step order using a **shallow object spread**.
+
+```ts
+import { Parallel } from '@zim-creator/node-operations';
+
+const getSummary = Parallel([
+  async (input: { id: string }) => ({
+    name: `User ${input.id}`,
+  }),
+  async (input: { active: boolean }) => ({
+    active: input.active,
+  }),
+]);
+
+const summary = await getSummary({ id: '1', active: true });
+// { name: 'User 1', active: true }
+```
+
+Input types are inferred from the steps. Required object fields are combined; fields supplied only by optional input types may become optional in the combined signature. Incompatible overlapping fields are intended to be flagged by the type-level validator.
+
+Nullish step results are ignored in the result reduction. If no step yields a mergeable result, the runtime returns `undefined`. If any step throws, `Parallel` rejects with that error.
+
+### Shallow result merging
+
+**Nested objects are not deeply merged.** When multiple results contain the same key, the later result overwrites the earlier one at runtime:
+
+```ts
+const getData = Parallel([
+  () => ({ data: { name: 'John' } }),
+  () => ({ data: { age: 25 } }),
+]);
+
+await getData();
+// { data: { age: 25 } }
+```
+
+**Current limitation:** Result type inference uses intersection-based merging and may not accurately describe overwrites of duplicate keys (especially nested objects). Avoid overlapping output keys when you need runtime results and inferred types to agree.
+
+### Parallel caching and context
+
+`Parallel` accepts an optional `Operation` configuration, so the combined execution can be cached. Its steps receive the shared execution context.
+
+```ts
+const summaryOperation = Parallel([
+  (input: { id: string }) => ({ id: input.id }),
+  () => ({ source: 'parallel' }),
+], {
+  cache: true,
+  key: ({ id }) => `summary:${id}`,
+});
+```
+
+## Optional
+
+`Optional` wraps a handler so failures do not interrupt a workflow. It returns the original input if the handler throws or returns `null` or `undefined`; otherwise, it returns the handler's result.
+
+```ts
+import { Optional, Pipe } from '@zim-creator/node-operations';
+
+const enrichUser = Optional(async (user: { id: string; name: string }) => {
+  const extra = user.id === '1' ? { verified: true } : undefined;
+  return extra ? { ...user, ...extra } : undefined;
+});
+
+const flow = Pipe([enrichUser]);
+```
+
+Since an error can cause the input to be returned, the result type includes the original input as a possible outcome. `Optional` intentionally suppresses thrown errors; use it only for steps whose failure is acceptable.
+
+## BaseIO
+
+Operation inputs and outputs are designed around object-based data. A top-level `BaseIO` is an object, `null`, `undefined`, or `void`.
+
+Supported object properties include strings, numbers, booleans, `null`, `undefined`, `Date`, nested objects, and arrays of supported values.
+
+```ts
+type UserInput = {
+  id: string;
+  options?: {
+    active: boolean;
+  };
+  tags: string[];
+  createdAt: Date;
+};
+```
+
+Primitive top-level outputs such as `string` and `number` are not part of the intended `BaseIO` contract.
+
+## Public exports
 
 ```ts
 import {
-	Operation,
-	Optional,
-	Pipe,
-	setOperationCacheFactory,
+  Operation,
+  Optional,
+  Pipe,
+  Parallel,
+  setOperationCacheFactory,
 } from '@zim-creator/node-operations';
-```
 
-Types:
-
-```ts
 import type {
-	BaseIO,
-	OperationConfig,
-	OperationContext,
-	OperationFunction,
-	OperationHandler,
-	OperationMeta,
+  BaseIO,
+  OperationConfig,
+  OperationContext,
+  OperationFunction,
+  OperationHandler,
+  OperationMeta,
 } from '@zim-creator/node-operations';
 ```
 
-Individual entry points are also available:
+Individual entry points are also supported:
 
 ```ts
 import { Operation } from '@zim-creator/node-operations/operation';
 import { Optional } from '@zim-creator/node-operations/optional';
 import { Pipe } from '@zim-creator/node-operations/pipe';
+import { Parallel } from '@zim-creator/node-operations/parallel';
 import { setOperationCacheFactory } from '@zim-creator/node-operations/store';
 ```
 
+## Development
+
+```bash
+yarn build   # Compile the library
+yarn test    # Run runtime tests
+yarn check   # Run Biome checks
+```
+
+Type-level assertions are maintained in `src/tests/*.ts-test.ts` and should be checked using the project's dedicated type-test configuration.
+
+## TODO
+
+- [ ] **Parallel optional input safety:** A callback declared with an optional object input can receive a non-nullish partial object that is missing fields required by that callback. Revisit input validation or invocation semantics.
+- [ ] **Pipe validation:** Review `CompareFunc` behavior with `void`, `undefined`, `null`, and optional parameters, and add regression type tests.
+- [ ] **Parallel result inference:** Align type-level merging with shallow runtime overwrite behavior for duplicate output keys.
+
 ## Status
 
-The package is currently under active development.
-
-Additional operation primitives, including parallel execution utilities, are planned.
+The library is under active development. Some type-level edge cases are documented above and remain subject to change.
 
 ## License
 

@@ -85,14 +85,14 @@ type OptionalObjects<T extends readonly unknown[]> = T extends readonly [
 
 // 4. Combine objects using intersection
 
-type DeepIntersect<A, B> = {
+type SafeIntersect<A, B> = {
 	[K in keyof A | keyof B]: K extends keyof A
 		? K extends keyof B
-			? [A[K]] extends [BaseIOObject]
-				? [B[K]] extends [BaseIOObject]
-					? DeepIntersect<A[K], B[K]>
+			? [NonNullable<A[K]>] extends [BaseIOObject]
+				? [NonNullable<B[K]>] extends [BaseIOObject]
+					? A[K] & B[K]
 					: never
-				: [B[K]] extends [BaseIOObject]
+				: [NonNullable<B[K]>] extends [BaseIOObject]
 					? never
 					: A[K] & B[K]
 			: A[K]
@@ -105,11 +105,13 @@ type IntersectAll<T extends readonly unknown[]> = T extends readonly [
 	infer First,
 	...infer Rest,
 ]
-	? DeepIntersect<First, IntersectAll<Rest>>
+	? SafeIntersect<First, IntersectAll<Rest>>
 	: // biome-ignore lint/complexity/noBannedTypes: expected
 		{};
 
-type Simplify<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
+type DeepSimplify<T> = T extends object
+	? { [K in keyof T]: DeepSimplify<T[K]> }
+	: T;
 
 // 5. Merge required and optional objects
 
@@ -119,10 +121,10 @@ type MergeIO<T extends readonly unknown[]> =
 			? R extends []
 				? O extends []
 					? undefined
-					: Simplify<Partial<IntersectAll<O>>> | undefined
+					: DeepSimplify<Partial<IntersectAll<O>>> | undefined
 				: O extends []
-					? Simplify<IntersectAll<R>>
-					: Simplify<IntersectAll<R> & Partial<IntersectAll<O>>>
+					? DeepSimplify<IntersectAll<R>>
+					: DeepSimplify<IntersectAll<R> & Partial<IntersectAll<O>>>
 			: never
 		: never;
 

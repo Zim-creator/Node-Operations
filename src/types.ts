@@ -14,7 +14,7 @@ export type OperationMeta = {
 	readonly __isOperation: true;
 };
 
-type Primitive = string | number | boolean | null | Date;
+type Primitive = string | number | boolean | null | undefined | Date;
 
 export type BaseIOObject = {
 	[key: string]: Primitive | BaseIOObject | (BaseIOObject | Primitive)[];
